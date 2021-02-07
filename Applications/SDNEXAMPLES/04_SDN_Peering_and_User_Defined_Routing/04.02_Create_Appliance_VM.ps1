@@ -296,7 +296,7 @@ choco install wireshark -y
 Write-Verbose "Creating Virtual Machine"
 
 New-VM -Name Appliance -ComputerName AzSHOST1 -VHDPath C:\ClusterStorage\S2D_vDISK1\Appliance\GUI.vhdx `
- -MemoryStartupBytes 8GB -Generation 2 -Path  C:\ClusterStorage\S2D_vDISK1\Appliance\ | Out-Null
+    -MemoryStartupBytes 8GB -Generation 2 -Path  C:\ClusterStorage\S2D_vDISK1\Appliance\ | Out-Null
 
 Set-VM -Name Appliance -ComputerName AzSHOST1 -ProcessorCount 4 | Out-Null
 

@@ -355,19 +355,19 @@ vendor's instructions.
 
 
 
-        $params = @{
+    $params = @{
 
-            Name           = 'L3Connection'
-            LocalIPAddress = $extBGPIP
-            PeerIPAddress  = $bgpRouterID
-            LocalASN       = $extBGPASN
-            PeerASN        = $intBGPASN
-            OperationMode  = 'Mixed'
-            PeeringMode    = 'Automatic' 
+        Name           = 'L3Connection'
+        LocalIPAddress = $extBGPIP
+        PeerIPAddress  = $bgpRouterID
+        LocalASN       = $extBGPASN
+        PeerASN        = $intBGPASN
+        OperationMode  = 'Mixed'
+        PeeringMode    = 'Automatic' 
 
-        }
+    }
 
-        Add-BgpPeer @params
+    Add-BgpPeer @params
 
 
 }

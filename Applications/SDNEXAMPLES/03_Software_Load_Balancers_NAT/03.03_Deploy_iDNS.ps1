@@ -13,8 +13,8 @@
 
 param(
 
-    [Parameter(Mandatory = $true, ParameterSetName = "ConfigurationFile")]
-    [String] $ConfigurationDataFile = 'C:\SCRIPTS\AzSHCISandbox-Config.psd1'
+  [Parameter(Mandatory = $true, ParameterSetName = "ConfigurationFile")]
+  [String] $ConfigurationDataFile = 'C:\SCRIPTS\AzSHCISandbox-Config.psd1'
 
 )
 
@@ -24,12 +24,12 @@ $VerbosePreference = "Continue"
 
 # Load in the configuration file.
 $SDNConfig = Import-PowerShellDataFile $ConfigurationDataFile
-if (!$SDNConfig) {Throw "Place Configuration File in the root of the scripts folder or specify the path to the Configuration file."}
+if (!$SDNConfig) { Throw "Place Configuration File in the root of the scripts folder or specify the path to the Configuration file." }
 
 
 # Set Credential Object
 $domainCred = new-object -typename System.Management.Automation.PSCredential `
-    -argumentlist (($SDNConfig.SDNDomainFQDN.Split(".")[0]) + "\administrator"), `
+  -argumentlist (($SDNConfig.SDNDomainFQDN.Split(".")[0]) + "\administrator"), `
 (ConvertTo-SecureString $SDNConfig.SDNAdminPassword -AsPlainText -Force)
 
 
@@ -62,7 +62,7 @@ $NCCredentials = Get-NetworkControllerCredential -ConnectionUri $uri
 # in the SDN Sandbox, but in production, you will want to interrogate NC to find the actual value as the ResourceRef can be different
 # depending on how NC was installed.
 
-$NCCredential = ($NCCredentials | Where-Object {$_.properties.username -match "$domainNetBIOS\\Administrator"}).ResourceRef
+$NCCredential = ($NCCredentials | Where-Object { $_.properties.username -match "$domainNetBIOS\\Administrator" }).ResourceRef
 $VerbosePreference = "Continue"
 
 Write-Verbose "Generating JSON File"
@@ -92,11 +92,11 @@ Write-Verbose "Posting iDNS config to Network Controller"
 
 $params = @{
 
-    Uri         = $dnsUri
-    Method      = 'Put'
-    Credential  = $domainCred
-    Body        = $payload
-    ContentType = $content
+  Uri         = $dnsUri
+  Method      = 'Put'
+  Credential  = $domainCred
+  Body        = $payload
+  ContentType = $content
 
 }
 
@@ -108,52 +108,52 @@ $AzSHOSTs = @("AzSHOST1", "AzSHOST2", "AzSHOST3")
 
 foreach ($AzSHOST in $AzSHOSTs) {
 
-    Invoke-Command -ComputerName $AzSHOST -ArgumentList $contosodcip -ScriptBlock {
+  Invoke-Command -ComputerName $AzSHOST -ArgumentList $contosodcip -ScriptBlock {
 
-        $VerbosePreference = "Continue"
+    $VerbosePreference = "Continue"
 
-        # Stop the NC Host Agent
-        Write-Verbose "Stopping NC Host Agent on $env:ComputerName"
-        Stop-Service NcHostAgent -Force
-
-
-        # Set a lot of registry settings
-        $contosodcip = $args[0]
-        New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet" -Name InfraServices -Force  | Out-Null
-        New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet\InfraServices" -Name DnsProxyService -Force  | Out-Null
-        $DNSProxyService = "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet\InfraServices\DnsProxyService"
-        New-ItemProperty -Name Port -Value 53 -PropertyType DWord -path $DNSProxyService -Force  | Out-Null
-        New-ItemProperty -Name ProxyPort -Value 53 -PropertyType DWord -Path $DNSProxyService -Force  | Out-Null
-        New-ItemProperty -Name IP -Value "169.254.169.254" -PropertyType String -Path $DNSProxyService -Force  | Out-Null
-        New-ItemProperty -Name MAC -Value "aa-bb-cc-aa-bb-cc" -PropertyType String -Path $DNSProxyService -Force | Out-Null
+    # Stop the NC Host Agent
+    Write-Verbose "Stopping NC Host Agent on $env:ComputerName"
+    Stop-Service NcHostAgent -Force
 
 
-        $DNSProxy = "HKLM:\SYSTEM\CurrentControlSet\Services\DNSProxy\Parameters"
-        New-Item -Path $DNSProxy -Force | Out-Null
-        New-ItemProperty -Name Forwarders -Value $contosodcip -PropertyType String -Path $DNSProxy -Force | Out-Null
+    # Set a lot of registry settings
+    $contosodcip = $args[0]
+    New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet" -Name InfraServices -Force  | Out-Null
+    New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet\InfraServices" -Name DnsProxyService -Force  | Out-Null
+    $DNSProxyService = "HKLM:\SYSTEM\CurrentControlSet\Services\NcHostAgent\Parameters\Plugins\Vnet\InfraServices\DnsProxyService"
+    New-ItemProperty -Name Port -Value 53 -PropertyType DWord -path $DNSProxyService -Force  | Out-Null
+    New-ItemProperty -Name ProxyPort -Value 53 -PropertyType DWord -Path $DNSProxyService -Force  | Out-Null
+    New-ItemProperty -Name IP -Value "169.254.169.254" -PropertyType String -Path $DNSProxyService -Force  | Out-Null
+    New-ItemProperty -Name MAC -Value "aa-bb-cc-aa-bb-cc" -PropertyType String -Path $DNSProxyService -Force | Out-Null
 
-        # If we are on 2016 SDN, then we need to add a start value to the DNSProxy Service which has been moved in 2019
+
+    $DNSProxy = "HKLM:\SYSTEM\CurrentControlSet\Services\DNSProxy\Parameters"
+    New-Item -Path $DNSProxy -Force | Out-Null
+    New-ItemProperty -Name Forwarders -Value $contosodcip -PropertyType String -Path $DNSProxy -Force | Out-Null
+
+    # If we are on 2016 SDN, then we need to add a start value to the DNSProxy Service which has been moved in 2019
 
 
-        # Start the Services
+    # Start the Services
 
-        Write-Verbose "Starting NC Host Agent on $env:ComputerName"
-        Start-Service NcHostAgent 
+    Write-Verbose "Starting NC Host Agent on $env:ComputerName"
+    Start-Service NcHostAgent 
 
-        Write-Verbose "Starting Software Load Balancer Host Agent on $env:ComputerName"
-        Start-Service SlbHostAgent
+    Write-Verbose "Starting Software Load Balancer Host Agent on $env:ComputerName"
+    Start-Service SlbHostAgent
 
-        # Start the DNS Proxy Service if we are using Server 2016
+    # Start the DNS Proxy Service if we are using Server 2016
 
-        if ($OSver) { 
+    if ($OSver) { 
 
-            Write-Verbose "Starting DNS Host Proxy on $env:ComputerName"
-            Start-Service -Name DnsProxy 
-
-        }
-
+      Write-Verbose "Starting DNS Host Proxy on $env:ComputerName"
+      Start-Service -Name DnsProxy 
 
     }
+
+
+  }
 
 
 

@@ -44,81 +44,81 @@ $prevbackups = Get-NetworkControllerBackup  -ConnectionUri $uri -Credential $dom
 
 if ($prevbackups.resourceid) { 
 
-Write-Host "The following are backups located for this network controller:"  -ForegroundColor Yellow
+    Write-Host "The following are backups located for this network controller:"  -ForegroundColor Yellow
 
-$prevbackups.resourceid
+    $prevbackups.resourceid
 
-$backupresid = Read-Host -Prompt "`nEnter the backup you wish to restore NC to"
+    $backupresid = Read-Host -Prompt "`nEnter the backup you wish to restore NC to"
 
-If ($backupresid) {
+    If ($backupresid) {
 
-# Stop the NC Host Agent and SLB Agent on all Hosts:
+        # Stop the NC Host Agent and SLB Agent on all Hosts:
 
-$AzSHOSTs = @("AzSHOST1", "AzSHOST2")
+        $AzSHOSTs = @("AzSHOST1", "AzSHOST2")
 
-foreach ($AzSHOST in $AzSHOSTs) {
+        foreach ($AzSHOST in $AzSHOSTs) {
 
-    Invoke-Command -ComputerName $AzSHOST  -ScriptBlock {
+            Invoke-Command -ComputerName $AzSHOST  -ScriptBlock {
 
-        $VerbosePreference = "Continue"
+                $VerbosePreference = "Continue"
 
-        # Stop the NC Host Agent
+                # Stop the NC Host Agent
 
-        Write-Verbose "Stopping NC Host Agent and SLB Host Agent on $env:ComputerName"
-        Stop-Service NcHostAgent -Force   # Note: SLB Host Agent will be offlined as it is dependent on the NCHostAgent
-
-              
-}
-
-
-}
-
-
-# Shutdown RAS Gateway VMs and SLBMUX VMs
-
-Write-Verbose "Shutting Down GW and Muxes"
-Get-VM -ComputerName azshost1, azshost2 | Where-Object {$_.Name -match 'GW0' -or $_.Name -match 'Mux0'} | Stop-VM 
-Start-Sleep -Seconds 60
-
-
-# Get SMB User credentials from the Network Controller and restore NC from backup
-$ShareUserResourceId = "BackupUser"
-$ShareCredential = Get-NetworkControllerCredential -ConnectionURI $URI -Credential $Credential | Where {$_.ResourceId -eq $ShareUserResourceId }
-$RestoreProperties = New-Object Microsoft.Windows.NetworkController.NetworkControllerRestoreProperties
-$RestoreProperties.RestorePath =  (Get-NetworkControllerBackup -ResourceId $backupresid -ConnectionUri $uri -Credential $domainCred).Properties.BackupPath
-$RestoreProperties.Credential = $ShareCredential
-
-# Restore Network Controller
-
-$restoreNC = New-NetworkControllerRestore -ResourceId $backupresid -ConnectionUri $uri -Credential $domainCred -Properties $RestoreProperties  -PassInnerException 
-
-
-# Restart VMs
-Get-VM -ComputerName azshost1, azshost2 | Where-Object {$_.Name -match 'GW0' -or $_.Name -match 'Mux0'} | Start-VM
-
-# Restart NC Host Agent and SLB Mux
-
-foreach ($AzSHOST in $AzSHOSTs) {
-
-    Invoke-Command -ComputerName $AzSHOST  -ScriptBlock {
-
-        $VerbosePreference = "Continue"
-
-        # Start the NC Host Agent
-
-        Write-Verbose "Starting NC Host Agent and SLB Host Agent on $env:ComputerName"
-        Start-Service NcHostAgent 
-        Start-Service SLBHostAgent  
+                Write-Verbose "Stopping NC Host Agent and SLB Host Agent on $env:ComputerName"
+                Stop-Service NcHostAgent -Force   # Note: SLB Host Agent will be offlined as it is dependent on the NCHostAgent
 
               
-}
-
-}
+            }
 
 
-}
+        }
 
-Get-VM -ComputerName azshost1, azshost2 | Where-Object {$_.Name -match 'GW0' -or $_.Name -match 'Mux0'} | Start-VM 
+
+        # Shutdown RAS Gateway VMs and SLBMUX VMs
+
+        Write-Verbose "Shutting Down GW and Muxes"
+        Get-VM -ComputerName azshost1, azshost2 | Where-Object { $_.Name -match 'GW0' -or $_.Name -match 'Mux0' } | Stop-VM 
+        Start-Sleep -Seconds 60
+
+
+        # Get SMB User credentials from the Network Controller and restore NC from backup
+        $ShareUserResourceId = "BackupUser"
+        $ShareCredential = Get-NetworkControllerCredential -ConnectionURI $URI -Credential $Credential | Where { $_.ResourceId -eq $ShareUserResourceId }
+        $RestoreProperties = New-Object Microsoft.Windows.NetworkController.NetworkControllerRestoreProperties
+        $RestoreProperties.RestorePath = (Get-NetworkControllerBackup -ResourceId $backupresid -ConnectionUri $uri -Credential $domainCred).Properties.BackupPath
+        $RestoreProperties.Credential = $ShareCredential
+
+        # Restore Network Controller
+
+        $restoreNC = New-NetworkControllerRestore -ResourceId $backupresid -ConnectionUri $uri -Credential $domainCred -Properties $RestoreProperties  -PassInnerException 
+
+
+        # Restart VMs
+        Get-VM -ComputerName azshost1, azshost2 | Where-Object { $_.Name -match 'GW0' -or $_.Name -match 'Mux0' } | Start-VM
+
+        # Restart NC Host Agent and SLB Mux
+
+        foreach ($AzSHOST in $AzSHOSTs) {
+
+            Invoke-Command -ComputerName $AzSHOST  -ScriptBlock {
+
+                $VerbosePreference = "Continue"
+
+                # Start the NC Host Agent
+
+                Write-Verbose "Starting NC Host Agent and SLB Host Agent on $env:ComputerName"
+                Start-Service NcHostAgent 
+                Start-Service SLBHostAgent  
+
+              
+            }
+
+        }
+
+
+    }
+
+    Get-VM -ComputerName azshost1, azshost2 | Where-Object { $_.Name -match 'GW0' -or $_.Name -match 'Mux0' } | Start-VM 
 
 }
 

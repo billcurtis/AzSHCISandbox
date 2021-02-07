@@ -235,14 +235,14 @@ Write-Verbose "Creating Virtual Machines"
 
 # Tenant VM1
 New-VM -Name TenantVM1 -ComputerName AzSHOST2 -VHDPath C:\ClusterStorage\S2D_vDISK1\TenantVM1\GUI.vhdx -MemoryStartupBytes 1GB `
--Generation 2 ` -Path C:\ClusterStorage\S2D_vDISK1\TenantVM1 | Out-Null
+    -Generation 2 ` -Path C:\ClusterStorage\S2D_vDISK1\TenantVM1 | Out-Null
 
 Set-VM -Name TenantVM1 -ComputerName AzSHOST2 -ProcessorCount 4 | Out-Null
 
 # Tenant VM2
 
 New-VM -Name TenantVM2 -ComputerName AzSHOST1 -VHDPath C:\ClusterStorage\S2D_vDISK1\TenantVM2\GUI.vhdx -MemoryStartupBytes 1GB `
--Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\TenantVM2  | Out-Null
+    -Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\TenantVM2  | Out-Null
 
 Set-VM -Name TenantVM2 -ComputerName AzSHOST1 -ProcessorCount 4
 

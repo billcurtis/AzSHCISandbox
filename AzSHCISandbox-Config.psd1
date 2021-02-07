@@ -6,14 +6,13 @@
 
     # Multiple Host Setup Parameters
     MultipleHyperVHosts                  = $false                                # Set to $true if deploying the Nested VM environment across multiple hosts. Set to $false if deploying to a single host. 
-    MultipleHyperVHostNames              = @("2019SDNn1","2019SDNn2")            # Array of all of the hosts which make up the Nested VM environment. Only 2 or 4 hosts supported
+    MultipleHyperVHostNames              = @("2019SDNn1", "2019SDNn2")           # (Deprecated - May work?) Array of all of the hosts which make up the Nested VM environment. Only 2 or 4 hosts supported 
     MultipleHyperVHostExternalSwitchName = "SDN-Switch"                          # Name of the External Hyper-V VM Switch identical on all hosts.
 
     # VHDX Paths 
-    guiVHDXPath                          = "C:\2019VHDS\GUI.vhdx"                # This value controls the location of the GUI VHDX.              
-    azsHCIVHDXPath                       =  "C:\AzHCIVHDs\AzStack.vhdx"          # This value controls the location of the Azure Stack HCI VHDX. 
-    #azsHCIVHDXPath                       =  "C:\2019VHDS\CORE.vhdx"           # This value controls the location of the Azure Stack HCI VHDX. 
-
+    guiVHDXPath                          = "C:\2019VHDS\GUI.vhdx"               # This value controls the location of the GUI VHDX.              
+    azsHCIVHDXPath                       = "C:\AzHCIVHDs\AzStack.vhdx"          # This value controls the location of the Azure Stack HCI VHDX. 
+    
 
     # SDN Lab Admin Password
     SDNAdminPassword                     = "Password01"                          # Password for all local and domain accounts. Do not include special characters in the password otherwise some unattended installs may fail.
@@ -26,7 +25,7 @@
 
 
     # ProductKeys
-    GUIProductKey                        = "BCXP2-N2TRP-D88XX-FY9QH-CYWWF"        # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
+    GUIProductKey                        = "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"       # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
 
     # SDN Lab Domain
     SDNDomainFQDN                        = "contoso.com"                          # Limit name (not the .com) to 14 characters as the name will be used as the NetBIOS name. 

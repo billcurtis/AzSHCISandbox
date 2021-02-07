@@ -28,20 +28,20 @@ $PeerASN = 5666                      # ASN of the Gateway the ipsec-target virtu
 
 $params = @{
 
-Name = $ConnectionName
-Destination = $Destination
-Protocol = 'IKEv2'
-AuthenticationMethod = 'PSKOnly'
-SharedSecret = $SharedSecret
-IPv4Subnet = "$IPv4Subnet/32:10"
-AuthenticationTransformConstants = "SHA196"
-CipherTransformConstants = 'AES256'
-DHGroup = 'Group2'
-EncryptionMethod = 'AES256'
-IntegrityCheckMethod = 'SHA1'
-PfsGroup = 'PFS2'
-SALifeTimeSeconds = 28800
-IdleDisconnectSeconds = 500
+     Name                             = $ConnectionName
+     Destination                      = $Destination
+     Protocol                         = 'IKEv2'
+     AuthenticationMethod             = 'PSKOnly'
+     SharedSecret                     = $SharedSecret
+     IPv4Subnet                       = "$IPv4Subnet/32:10"
+     AuthenticationTransformConstants = "SHA196"
+     CipherTransformConstants         = 'AES256'
+     DHGroup                          = 'Group2'
+     EncryptionMethod                 = 'AES256'
+     IntegrityCheckMethod             = 'SHA1'
+     PfsGroup                         = 'PFS2'
+     SALifeTimeSeconds                = 28800
+     IdleDisconnectSeconds            = 500
 
 }
 
@@ -56,9 +56,9 @@ Add-VpnS2SInterface @params -CustomPolicy
 
 $params = @{
 
-DestinationPrefix = $DestinationPrefix
-NextHop = $NextHop
-InterfaceAlias = $InterfaceAlias
+     DestinationPrefix = $DestinationPrefix
+     NextHop           = $NextHop
+     InterfaceAlias    = $InterfaceAlias
 
 }
 
@@ -69,13 +69,13 @@ New-NetRoute @params
 
 $params = @{
 
-Name = $ConnectionName
-LocalIPAddress = $LocalIPAddress
-PeerIPAddress = $IPv4Subnet
-LocalASN = $LocalASN
-PeerASN = $PeerASN
-OperationMOde = 'Mixed'
-PeeringMode = 'Automatic'
+     Name           = $ConnectionName
+     LocalIPAddress = $LocalIPAddress
+     PeerIPAddress  = $IPv4Subnet
+     LocalASN       = $LocalASN
+     PeerASN        = $PeerASN
+     OperationMOde  = 'Mixed'
+     PeeringMode    = 'Automatic'
 
 }
 

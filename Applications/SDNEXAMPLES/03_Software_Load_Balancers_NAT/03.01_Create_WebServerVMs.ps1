@@ -236,14 +236,14 @@ Write-Verbose "Creating Virtual Machines"
 
 # WebServerVM1
 New-VM -Name WebServerVM1 -ComputerName AzSHOST2 -VHDPath C:\ClusterStorage\S2D_vDISK1\WebServerVM1\GUI.vhdx -MemoryStartupBytes 1GB `
--Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\WebServerVM1 | Out-Null
+    -Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\WebServerVM1 | Out-Null
 
 Set-VM -Name WebServerVM1 -ComputerName AzSHOST2 -ProcessorCount 4 | Out-Null
 
 # WebServerVM2
 
 New-VM -Name WebServerVM2 -ComputerName AzSHOST1 -VHDPath C:\ClusterStorage\S2D_vDISK1\WebServerVM2\GUI.vhdx -MemoryStartupBytes 1GB `
--Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\WebServerVM2 | Out-Null
+    -Generation 2 -Path C:\ClusterStorage\S2D_vDISK1\WebServerVM2 | Out-Null
 
 Set-VM -Name WebServerVM2 -ComputerName AzSHOST1 -ProcessorCount 4
 

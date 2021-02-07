@@ -44,10 +44,10 @@ New-Item -Path 'C:\ncbackup' -ItemType Directory -Force | Out-Null
 
 $params = @{
 
-Name = 'NCBackup'
-Path = 'c:\ncbackup'
-FullAccess = 'Everyone'
-Description = 'Backup Share for NC Backups'
+    Name        = 'NCBackup'
+    Path        = 'c:\ncbackup'
+    FullAccess  = 'Everyone'
+    Description = 'Backup Share for NC Backups'
 
 }
 
@@ -57,7 +57,7 @@ $Share = New-SmbShare @params -ErrorAction SilentlyContinue
 
 $ShareUserResourceId = "BackupUser"
 
-$ShareCredential = Get-NetworkControllerCredential -ConnectionURI $URI -Credential $domainCred | Where {$_.ResourceId -eq $ShareUserResourceId }
+$ShareCredential = Get-NetworkControllerCredential -ConnectionURI $URI -Credential $domainCred | Where { $_.ResourceId -eq $ShareUserResourceId }
 If ($ShareCredential -eq $null) {
     $domainCredProperties = New-Object Microsoft.Windows.NetworkController.CredentialProperties
     $domainCredProperties.Type = "usernamePassword"
@@ -80,9 +80,9 @@ $backupStatus = $null
 
 $params = @{
 
-ConnectionUri = $uri
-Credential = $domainCred
-ResourceId = $Backup.ResourceId
+    ConnectionUri = $uri
+    Credential    = $domainCred
+    ResourceId    = $Backup.ResourceId
 
 }
 
@@ -90,9 +90,9 @@ While ($backupStatus.Properties.ProvisioningState -ne 'Succeeded') {
 
 
 
-$backupStatus = Get-NetworkControllerBackup  @params
+    $backupStatus = Get-NetworkControllerBackup  @params
 
-Write-Verbose $backupStatus.Properties.ProvisioningState
+    Write-Verbose $backupStatus.Properties.ProvisioningState
 
 }
 

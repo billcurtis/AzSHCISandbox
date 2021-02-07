@@ -1,5 +1,8 @@
 # SDN Sandbox Guide (9/18/2019)
 
+
+![alt text](res/AzSHCISandbox.png "Graphic of a fully deployed SDN Sandbox")
+
 The AZHCI Sandbox is a series of scripts that creates a [HyperConverged](https://docs.microsoft.com/en-us/windows-server/hyperconverged/) environment using four nested Hyper-V Virtual Machines. The purpose of the SDN Sandbox is to provide operational training on Microsoft SDN as well as provide a development environment for DevOPs to assist in the creation and
 validation of SDN features without the time consuming process of setting up physical servers and network routers\switches.
 
@@ -25,13 +28,13 @@ You probably are not going to read the requirements listed below, so here are th
 
 2. Create Sysprepped VHDX files for the 2019 Datacenter GUI.
 
-3. Create a Sysprepped Azure Stack HCI VHDX file.
+3. Create a Sysprepped Azure Stack HCI VHDX file (with the latest updates).
 
 4. Edit the .PSD1 configuration file (do not rename it) to set:
     
     * The Password needs to be the same as the local administrator password on your physical Hyper-V Host
 
-    * Product Keys for Datacenter, and the product key for Windows 10.  
+    * Product Key for Server 2019 
       
     >**Warning!** The Configuration file will be copied to the console drive during install. **The product keys will be in plain text and not deleted or hidden!**     
     
@@ -39,13 +42,13 @@ You probably are not going to read the requirements listed below, so here are th
     * Set ``HostVMPath`` where your VHDX files will reside. (*Ensure that there is at least 250gb of free space!*)
     * Optionally, set the name of your external switch that has access to the internet in the ``natExternalVMSwitchName = `` setting and optionally the VLAN for it in the ``natVLANID``. If you don't want Internet access, set ``natConfigure`` to ``$false``.
 
-5. Download [**Windows Admin Center**](https://docs.microsoft.com/en-us/windows-server/manage/windows-admin-center/understand/windows-admin-center) and [**Remote Server Administration Tools for Windows 10**](https://www.microsoft.com/en-us/download/details.aspx?id=45520) and place the install files under their respective folders in `.\Applications`
+5. Download the [**Windows Admin Center**](https://docs.microsoft.com/en-us/windows-server/manage/windows-admin-center/understand/windows-admin-center) install file and place it in the `.\Windows Admin Center` folder.
 
 6. On the Hyper-V Host, open up a PowerShell console (with admin rights) and navigate to the ``AzSHCISandbox` folder and run ``.\New-AzSHCISandbox``.
 
 7. It should take a little over an hour to deploy (if using SSD drives).
 
-8. Using RDP, log into the Console with your creds: User: Contoso\Administrator Password: Password01
+8. Using RDP, log into the 'Admincenter' virtual machine with your creds: User: Contoso\Administrator Password: Password01
 
 9. Launch the link to Windows Admin Center
 
@@ -55,20 +58,17 @@ You probably are not going to read the requirements listed below, so here are th
 
 ## Configuration Overview
 
-![alt text](res/SDNSandbox.png "Graphic of a fully deployed SDN Sandbox")
-
 AzSHCISandbox will automatically create and configure the following:
 
 * Active Directory virtual machine
 * Windows Admin Center virtual machine
 * Routing and Remote Access virtual machine (to emulate a *Top of Rack (ToR)* switch)
-* Three node Hyper-V S2D cluster with each having a SET Switch
+* Two node Hyper-V S2D cluster with each having a SET Switch
 * One Single Node Network Controller virtual machine
 * One Software Load Balancer virtual machine
 * Two Gateway virtual machines (one active, one passive)
-* One Console virtual machine to manage the entire environment
 * Management and Provider VLAN and networks 
-* Private, Public, and GRE VIPs automatically configured in Network Controller
+* Private, Public, and GRE VIPs and automatically configured in Network Controller
 * VLAN to provide testing for L3 Gateway Connections
 
 
@@ -85,7 +85,6 @@ Please note the following regarding the hardware setup requirements:
 
 * If using more than one host, ensure that all hosts have an **EXTERNAL** Hyper-V Switch that has the same name across all the Hyper-V Servers used in the lab.
 * Windows Server 2016 (Standard or Datacenter) or higher Hyper-V **MUST** already have been installed along with the RSAT-Hyper-V tools.
-* AMD CPUs are not supported as they do not support Hyper-V Nested Virtualization.
 
 * It is recommended that you disable all disconnected network adapters or network adapters that will not be used.
 
@@ -102,15 +101,14 @@ Please note the following regarding the hardware setup requirements:
 
 ### NAT Prerequisites
 
-If you wish the environment to have internet access in the Sandbox, create a VMswitch on the FIRST host that maps to a NIC on a network that has internet access the network should use DHCP. The configuration file will need to be updated to include the name of the VMswitch to use for NAT.
-
+Internet access is required.
+On the Hyper-V Host, create a VMswitch  that maps to a NIC attached to a network that has internet access and provides addresses using DHCP. The configuration file will need to be updated to include the name of this VMswitch to use for NAT.
 
 ## Software Prerequisites
 
 ### Required VHDX files:
 
- **GUI.vhdx** - Sysprepped Desktop Experience version of Windows Server 2019 **Datacenter**. Only Windows Server 2019 Datacenter is supported. Other releases such as Server Datacenter 1809 are not supported as they do not support S2D.
-           
+ **GUI.vhdx** - Sysprepped Desktop Experience version of Windows Server 2019 **Datacenter**. Only Windows Server 2019 Datacenter is supported. Other releases such as Server Datacenter 1809 are not supported as they do not support S2D.           
   
 **AzSHCI.vhdx** - Same requirements.
 

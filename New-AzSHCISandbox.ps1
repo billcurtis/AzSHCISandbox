@@ -8,10 +8,10 @@
     .\New-AzSHCISandbox.ps1
     Reads in the configuration from AzSHCISandbox-Config.psd1 that contains a hash table 
     of settings data that will in same root as New-SDNSandbox.ps1
-
+    cd c
 .EXAMPLE
     .\New-AzSHCISandbox.ps1 -Delete $true
-     Removes the VMs and VHDs of the SDN Sandbox installation. (Note: Some files will
+     Removes the VMs and VHDs of the Azure Stack HCI Sandbox installation. (Note: Some files will
      remain after deletion.)
 
 .NOTES
@@ -442,7 +442,9 @@ function New-NestedVM {
             New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk1.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null
             New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk2.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null
             New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk3.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null
-            New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk4.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null   
+            New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk4.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null
+            New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk5.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null
+            New-VHD -Path "$HostVMPath\$AzSHOST-S2D_Disk6.vhdx" -SizeBytes $S2DDiskSize -Dynamic | Out-Null    
     
         }    
     
@@ -467,6 +469,8 @@ function New-NestedVM {
             Add-VMHardDiskDrive -Path "$HostVMPath\$AzSHOST-S2D_Disk2.vhdx" -VMName $AzSHOST | Out-Null
             Add-VMHardDiskDrive -Path "$HostVMPath\$AzSHOST-S2D_Disk3.vhdx" -VMName $AzSHOST | Out-Null
             Add-VMHardDiskDrive -Path "$HostVMPath\$AzSHOST-S2D_Disk4.vhdx" -VMName $AzSHOST | Out-Null
+            Add-VMHardDiskDrive -Path "$HostVMPath\$AzSHOST-S2D_Disk5.vhdx" -VMName $AzSHOST | Out-Null
+            Add-VMHardDiskDrive -Path "$HostVMPath\$AzSHOST-S2D_Disk6.vhdx" -VMName $AzSHOST | Out-Null
 
         }
     
@@ -669,6 +673,7 @@ function Add-Files {
             Copy-Item -Path $guiVHDXPath -Destination ($MountedDrive + ":\VMs\Base\GUI.vhdx") -Force
             Copy-Item -Path $azSHCIVHDXPath -Destination ($MountedDrive + ":\VMs\Base\AzSHCI.vhdx") -Force
             Copy-Item -Path .\Applications\SCRIPTS -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force
+            Copy-Item -Path .\Applications\SDNEXAMPLES -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force
             Copy-Item -Path '.\Applications\Windows Admin Center' -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force  
 
         }       
@@ -859,7 +864,7 @@ function Resolve-Applications {
     $Core = (Get-ItemProperty $regKey).InstallationType -eq "Server Core"
     If ($Core) {
     
-        Write-Warning "You might not want to run SDN Sandbox on Server Core, getting remote access to the AdminCenter VM may require extra configuration."
+        Write-Warning "You might not want to run the Azure Stack HCI OS Sandbox on Server Core, getting remote access to the AdminCenter VM may require extra configuration."
         Start-Sleep -Seconds 5
 
     }
@@ -920,15 +925,55 @@ function Set-SDNserver {
 
     )
 
+
+    # Set base number for Storage IPs
+    $int = 9
+
+
     foreach ($SDNVM in $VMPlacement) {
+
+    
+    # Increment Storage IPs
+
+    $int++
+
 
         Invoke-Command -ComputerName $SDNVM.VMHost -ScriptBlock {
 
-            Invoke-Command -VMName $using:SDNVM.AzSHOST -ArgumentList $using:SDNConfig, $using:localCred -ScriptBlock {
+            Invoke-Command -VMName $using:SDNVM.AzSHOST -ArgumentList $using:SDNConfig, $using:localCred, $using:int  -ScriptBlock {
 
                 $SDNConfig = $args[0]
                 $localCred = $args[1]
+                $int = $args[2]
                 $VerbosePreference = "Continue"
+
+
+                # Create IP Address of Storage Adapters
+
+                 $storageAIP = $sdnconfig.storageAsubnet.Replace("0/24",$int)
+                 $storageBIP = $sdnconfig.storageBsubnet.Replace("0/24",$int)
+
+
+                # Set Name and IP Addresses on Storage Interfaces
+                $storageNICs = Get-NetAdapterAdvancedProperty | Where-Object {$_.DisplayValue -match "Storage"}
+
+                    foreach ($storageNIC in $storageNICs) {
+
+                    Rename-NetAdapter -Name $storageNIC.Name -NewName  $storageNIC.DisplayValue        
+
+                                                            }
+
+                $storageNICs = Get-Netadapter | Where-Object {$_.Name -match "Storage"}
+
+                foreach ($storageNIC in $storageNICs) {
+
+                If ($storageNIC.Name -eq 'StorageA') { New-NetIPAddress -InterfaceAlias $storageNIC.Name -IPAddress $storageAIP -PrefixLength 24 | Out-Null }  
+                If ($storageNIC.Name -eq 'StorageB') { New-NetIPAddress -InterfaceAlias $storageNIC.Name -IPAddress $storageBIP -PrefixLength 24 | Out-Null }  
+
+                                                      }
+
+
+
 
                 # Enable WinRM
 
@@ -984,7 +1029,10 @@ function Set-AzSMGMT {
 
     )
 
-    Invoke-Command -ComputerName AzSMGMT -Credential $localCred  -ScriptBlock {
+    $azsmgmtip = $SDNConfig.AzSMGMTIP.Replace('/24','')
+
+
+    Invoke-Command -ComputerName $azsmgmtip -Credential $localCred  -ScriptBlock {
 
         # Creds
 
@@ -1007,6 +1055,7 @@ function Set-AzSMGMT {
         $WarningPreference = "SilentlyContinue"
 
         # Disable Fabric2 Network Adapter
+        Write-Verbose "Disabling Fabric2 Adapter"
         $VerbosePreference = "SilentlyContinue"
         Get-Netadapter FABRIC2 | Disable-NetAdapter -Confirm:$false | Out-Null
 
@@ -1201,7 +1250,6 @@ function Set-AzSMGMT {
 
             $AzSHOST1 = $SDNConfig.AzSHOST1IP.Split("/")[0]
             $AzSHOST2 = $SDNConfig.AzSHOST2IP.Split("/")[0]
-            $AzSHOST3 = $SDNConfig.AzSHOST3IP.Split("/")[0]
 
             Write-Verbose "Setting VMStorage Path for all Hosts"
           
@@ -1211,18 +1259,13 @@ function Set-AzSMGMT {
             Invoke-Command -ComputerName $AzSHOST2  -ArgumentList $VMStoragePathforOtherHosts `
                 -ScriptBlock { Set-VMHost -VirtualHardDiskPath $args[0] -VirtualMachinePath $args[0] } `
                 -Credential $using:localCred -AsJob | Out-Null
-            Invoke-Command -ComputerName $AzSHOST3 -ArgumentList $VMStoragePathforOtherHosts `
-                -ScriptBlock { Set-VMHost -VirtualHardDiskPath $args[0] -VirtualMachinePath $args[0] } `
-                -Credential $using:localCred -AsJob | Out-Null
+
 
             # 2nd pass
             Invoke-Command -ComputerName $AzSHOST1 -ArgumentList $VMStoragePathforOtherHosts `
                 -ScriptBlock { Set-VMHost -VirtualHardDiskPath $args[0] -VirtualMachinePath $args[0] } `
                 -Credential $using:localCred -AsJob | Out-Null
             Invoke-Command -ComputerName $AzSHOST2 -ArgumentList $VMStoragePathforOtherHosts `
-                -ScriptBlock { Set-VMHost -VirtualHardDiskPath $args[0] -VirtualMachinePath $args[0] } `
-                -Credential $using:localCred -AsJob | Out-Null
-            Invoke-Command -ComputerName $AzSHOST3 -ArgumentList $VMStoragePathforOtherHosts `
                 -ScriptBlock { Set-VMHost -VirtualHardDiskPath $args[0] -VirtualMachinePath $args[0] } `
                 -Credential $using:localCred -AsJob | Out-Null
 
@@ -1241,7 +1284,7 @@ function Set-AzSMGMT {
             Write-Verbose "Adding SDN Hosts to the Domain"
             AddAzSHOSTToDomain -IP $AzSHOST1 -localCred $using:localCred -domainCred $using:domainCred -AzSHOSTName AzSHOST1 -SDNConfig $SDNConfig
             AddAzSHOSTToDomain -IP $AzSHOST2 -localCred $using:localCred -domainCred $using:domainCred -AzSHOSTName AzSHOST2 -SDNConfig $SDNConfig
-            AddAzSHOSTToDomain -IP $AzSHOST3 -localCred $using:localCred -domainCred $using:domainCred -AzSHOSTName AzSHOST3 -SDNConfig $SDNConfig
+
         }
 
         Catch {
@@ -1981,6 +2024,7 @@ function New-AdminCenterVM {
         Write-Verbose "Copying Application and Script Source Files to $VMName"
         Copy-Item 'C:\VMConfigs\Windows Admin Center' -Destination C:\TempWACMount\ -Recurse -Force
         Copy-Item C:\VMConfigs\SCRIPTS -Destination C:\TempWACMount -Recurse -Force
+        Copy-Item C:\VMConfigs\SDNEXAMPLES -Destination C:\TempWACMount -Recurse -Force
         New-Item -Path C:\TempWACMount\VHDs -ItemType Directory -Force | Out-Null
         Copy-Item C:\VMs\Base\AzSHCI.vhdx -Destination C:\TempWACMount\VHDs -Force
         Copy-Item C:\VMs\Base\GUI.vhdx  -Destination  C:\TempWACMount\VHDs -Force
@@ -2238,6 +2282,15 @@ function New-AdminCenterVM {
             # Install VPN Routing
             Install-RemoteAccess -VPNType RoutingOnly | Out-Null
 
+            # Install Nuget
+            Install-PackageProvider -Name Nuget -MinimumVersion 2.8.5.201 -Force
+
+            # Install Azure PowerShell
+            Install-Module -Name Az -AllowClobber -SkipPublisherCheck -Force -Confirm:$false
+
+            # Stop Server Manager from starting on boot
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\ServerManager" -Name "DoNotOpenServerManagerAtLogon" -Value 1
+            
             # Request SSL Certificate for Windows Admin Center
             Write-Verbose "Generating SSL Certificate Request"
 
@@ -2473,7 +2526,7 @@ function New-HyperConvergedEnvironment {
     Invoke-Command -ComputerName Admincenter -Credential $domainCred -ScriptBlock {
 
         $SDNConfig = $Using:SDNConfig
-        $AzSHOSTs = @("AzSHOST1", "AzSHOST2", "AzSHOST3")
+        $AzSHOSTs = @("AzSHOST1", "AzSHOST2")
 
         $ErrorActionPreference = "Stop"
         $VerbosePreference = "Continue"
@@ -2679,7 +2732,7 @@ function New-SDNEnvironment {
                 $NCConfig.ManagementSubnet = $SDNConfig.MGMTSubnet
                 $NCConfig.ProductKey = $SDNConfig.COREProductKey
 
-                $NCConfig.HyperVHosts = @("AzSHOST1.$fqdn", "AzSHOST2.$fqdn", "AzSHOST3.$fqdn" )
+                $NCConfig.HyperVHosts = @("AzSHOST1.$fqdn", "AzSHOST2.$fqdn")
 
                 $NCConfig.ManagementDNS = @(
                     ($SDNConfig.BGPRouterIP_MGMT.Split("/")[0].TrimEnd("1")) + "254"
@@ -2689,7 +2742,7 @@ function New-SDNEnvironment {
 
                     @{
                         ComputerName = 'Mux01'
-                        HostName     = "AzSHOST3.$($SDNConfig.SDNDomainFQDN)"
+                        HostName     = "AzSHOST2.$($SDNConfig.SDNDomainFQDN)"
                         ManagementIP = ($SDNConfig.BGPRouterIP_MGMT.TrimEnd("1/24")) + "61"
                         MACAddress   = '00-1D-D8-B7-1C-01'
                         PAIPAddress  = ($SDNConfig.BGPRouterIP_ProviderNetwork.TrimEnd("1/24")) + "4"
@@ -2766,7 +2819,7 @@ function New-SDNEnvironment {
 
 }
 
-function Delete-SDNSandbox {
+function Delete-AzSHCISandbox {
 
     param (
 
@@ -2778,7 +2831,7 @@ function Delete-SDNSandbox {
 
     $VerbosePreference = "Continue"
 
-    Write-Verbose "Deleting SDNSandbox"
+    Write-Verbose "Deleting Azure Stack HCI Sandbox"
 
     foreach ($vm in $VMPlacement) {
 
@@ -2946,7 +2999,10 @@ $json
    
         }
         
-             
+         
+         # Configure Single sign-on for all computers
+         
+          Get-ADComputer -Filter * | Set-ADComputer -PrincipalsAllowedToDelegateToAccount (Get-ADComputer AdminCenter)    
 
     }
 
@@ -2981,10 +3037,11 @@ function New-SDNS2DCluster {
             $SDNConfig = $args[0]
             $domainCred = $args[1]
 
+
             # Create S2D Cluster
 
             $SDNConfig = $args[0]
-            $AzSHOSTs = @("AzSHOST1", "AzSHOST2", "AzSHOST3")
+            $AzSHOSTs = @("AzSHOST1", "AzSHOST2")
 
             Write-Verbose "Creating Cluster: AzStackCluster"
 
@@ -3025,12 +3082,13 @@ function New-SDNS2DCluster {
                 FriendlyName            = "S2D_vDISK1" 
                 FileSystem              = 'CSVFS_ReFS'
                 StoragePoolFriendlyName = 'SDN_S2D_Storage'
-                ResiliencySettingName   = 'Parity'
+                ResiliencySettingName   = 'Mirror'
                 PhysicalDiskRedundancy  = 1
+                
                 
             }
 
-            New-Volume @params -UseMaximumSize | Out-Null
+            New-Volume @params -UseMaximumSize  | Out-Null
 
             # Set Virtual Environment Optimizations
 
@@ -3041,13 +3099,38 @@ function New-SDNS2DCluster {
 
         } | Out-Null
 
+
+          # Rename Storage Network Adapters
+
+            (Get-Cluster -Name azstackcluster | Get-ClusterNetwork | Where-Object {$_.Address -eq ($sdnconfig.storageAsubnet.Replace('/24',''))}).Name = 'StorageA'
+            (Get-Cluster -Name azstackcluster | Get-ClusterNetwork | Where-Object {$_.Address -eq ($sdnconfig.storageBsubnet.Replace('/24',''))}).Name = 'StorageB'
+            (Get-Cluster -Name azstackcluster | Get-ClusterNetwork | Where-Object {$_.Address -eq ($sdnconfig.MGMTSubnet.Replace('/24',''))}).Name = 'Public'
+
+
+          # Set Allowed Networks for Live Migration
+
+          Get-ClusterResourceType -Name "Virtual Machine" -Cluster AzStackCluster | Set-ClusterParameter -Cluster AzStackCluster -Name MigrationExcludeNetworks `
+            -Value ([String]::Join(";",(Get-ClusterNetwork -Cluster AzStackCluster | Where-Object {$_.Name -notmatch "Storage"}).ID))
+
+
     } 
 
-  
 
 }
 
+function test-internetConnect {
 
+$testIP = '1.1.1.1'
+$ErrorActionPreference = "Stop"  
+$intConnect = Test-Connection -ComputerName $testip -Quiet -Count 2
+
+if (!$intConnect) {
+
+Write-Error "Unable to connect to Internet. An Internet connection is required."
+
+}
+
+}
 
 #endregion
    
@@ -3078,7 +3161,7 @@ $NCClientCred = new-object -typename System.Management.Automation.PSCredential `
 (ConvertTo-SecureString $SDNConfig.SDNAdminPassword  -AsPlainText -Force)
 
 # Define SDN host Names. Please do not change names as these names are hardcoded in the setup.
-$AzSHOSTs = @("AzSMGMT", "AzSHOST1", "AzSHOST2", "AzSHOST3")
+$AzSHOSTs = @("AzSMGMT", "AzSHOST1", "AzSHOST2")
 
 
 # Delete configuration if specified
@@ -3105,9 +3188,9 @@ if ($Delete) {
 
     }
 
-    Delete-SDNSandbox -SDNConfig $SDNConfig -VMPlacement $VMPlacement -SingleHostDelete $SingleHostDelete
+    Delete-AzSHCISandbox -SDNConfig $SDNConfig -VMPlacement $VMPlacement -SingleHostDelete $SingleHostDelete
 
-    Write-Verbose "Successfully Removed the SDN Sandbox"
+    Write-Verbose "Successfully Removed the Azure Stack HCI Sandbox"
     exit
 
 }
@@ -3143,6 +3226,9 @@ $VerbosePreference = "Continue"
 # Verify Applications
 
 Resolve-Applications -SDNConfig $SDNConfig
+
+# Verify Internet Connectivity
+test-internetConnect
     
 # if single host installation, set up installation parameters
 
@@ -3468,7 +3554,8 @@ if ($natConfigure) {
     
 # Provision AzSMGMT VMs (DC, Router, and AdminCenter)
 
-Write-Verbose  "Configuring Management VM" 
+Write-Verbose  "Configuring Management VM"
+
 
 $params = @{
 
@@ -3547,7 +3634,7 @@ If ($SDNConfig.ProvisionNC) {
 }
 
 
-Write-Verbose "`nSuccessfully deployed the SDN Sandbox"
+Write-Verbose "`nSuccessfully deployed the Azure Stack HCI Sandbox"
  
 $ErrorActionPreference = "Continue"
 $VerbosePreference = "SilentlyContinue"

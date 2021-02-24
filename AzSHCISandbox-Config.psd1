@@ -10,8 +10,8 @@
     MultipleHyperVHostExternalSwitchName = "SDN-Switch"                          # Name of the External Hyper-V VM Switch identical on all hosts.
 
     # VHDX Paths 
-    guiVHDXPath                          = "C:\2019VHDS\GUI.vhdx"               # This value controls the location of the GUI VHDX.              
-    azsHCIVHDXPath                       = "C:\AzHCIVHDs\AzStack.vhdx"          # This value controls the location of the Azure Stack HCI VHDX. 
+    guiVHDXPath                          = "C:\AzHCIVHDs\GUI.vhdx"               # This value controls the location of the GUI VHDX.              
+    azsHCIVHDXPath                       = "C:\AzHCIVHDs\AzStack.vhdx"           # This value controls the location of the Azure Stack HCI VHDX. 
     
 
     # SDN Lab Admin Password
@@ -21,11 +21,11 @@
     HostVMPath                           = "V:\VMs"                              # This value controls the path where the Nested VMs will be stored on all hosts.
     NestedVMMemoryinGB                   = 30GB                                  # This value controls the amount of RAM for each Nested Hyper-V Host (AzSHOST1-2).
     AzSMGMTMemoryinGB                    = 30GB                                  # This value controls the amount of RAM for the AzSMGMT Nested VM which contains only the Console, Router, Admincenter, and DC VMs.
-    InternalSwitch                       = "Contoso"                             # Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host.
+    InternalSwitch                       = "InternalSwitch"                      # Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host.
 
 
     # ProductKeys
-    GUIProductKey                        = "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"       # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
+    GUIProductKey                        = "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"        # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
 
     # SDN Lab Domain
     SDNDomainFQDN                        = "contoso.com"                          # Limit name (not the .com) to 14 characters as the name will be used as the NetBIOS name. 
@@ -33,10 +33,10 @@
 
 
     # NAT Configuration
+    natHostSubnet                        = "192.168.128.0/24"
+    natHostVMSwitchName                  = "InternalNAT"
     natConfigure                         = $true
     natSubnet                            = "192.168.46.0/24"                      # This value is the subnet is the NAT router will use to route to  AzSMGMT to access the Internet. It can be any /24 subnet and is only used for routing.
-    natExternalVMSwitchName              = "Internet"                             # Name of external virtual switch on the physical host that has access to the Internet.
-    natVLANID                            = 131                                    # VLAN ID (if needed) that for access to the external network that requires Internet access. (Note: The network will require DHCP).
     natDNS                               = "1.1.1.1"                              # DNS address for forwarding from Domain Controller. Using Cloudflare DNS.
 
     # Global MTU
@@ -56,7 +56,7 @@
     MEM_DC                               = 2GB                                     # Memory provided for the Domain Controller VM
     MEM_BGP                              = 2GB                                     # Memory provided for the BGP-ToR-Router
     MEM_Console                          = 3GB                                     # Memory provided for the Windows 10 Console VM
-    MEM_WAC                              = 2GB                                     # Memory provided for the Windows Admin Center VM
+    MEM_WAC                              = 4GB                                     # Memory provided for the Windows Admin Center VM
     MEM_GRE                              = 2GB                                     # Memory provided for the gre-target VM
     MEM_IPSEC                            = 2GB                                     # Memory provided for the ipsec-target VM
 

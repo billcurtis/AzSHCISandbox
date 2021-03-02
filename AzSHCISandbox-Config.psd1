@@ -10,8 +10,8 @@
     MultipleHyperVHostExternalSwitchName = "SDN-Switch"                          # Name of the External Hyper-V VM Switch identical on all hosts.
 
     # VHDX Paths 
-    guiVHDXPath                          = "C:\AzHCIVHDs\GUI.vhdx"               # This value controls the location of the GUI VHDX.              
-    azsHCIVHDXPath                       = "C:\AzHCIVHDs\AzStack.vhdx"           # This value controls the location of the Azure Stack HCI VHDX. 
+    guiVHDXPath                          = "C:\AzHCIVHDs\gui.vhdx"               # This value controls the location of the GUI VHDX.              
+    azsHCIVHDXPath                       = "C:\AzHCIVHDs\azshci.vhdx"           # This value controls the location of the Azure Stack HCI VHDX. 
     
 
     # SDN Lab Admin Password
@@ -25,7 +25,7 @@
 
 
     # ProductKeys
-    GUIProductKey                        = "WMDGN-G9PQG-XVVXX-R3X43-63DFG"   # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
+    GUIProductKey                        = "WMDGN-G9PQG-XVVXX-R3X43-63DFG"        # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
 
     # SDN Lab Domain
     SDNDomainFQDN                        = "contoso.com"                          # Limit name (not the .com) to 14 characters as the name will be used as the NetBIOS name. 

@@ -3265,6 +3265,11 @@ $starttime = Get-Date
 $SDNConfig = Import-PowerShellDataFile -Path $ConfigurationDataFile
 Copy-Item $ConfigurationDataFile -Destination .\Applications\SCRIPTS -Force
 
+# Set VM Host Memory
+$totalPhysicalMemory = (Get-CimInstance -ClassName 'Cim_PhysicalMemory' | Measure-Object -Property Capacity -Sum).Sum / 1GB
+$availablePhysicalMemory = (([math]::Round(((((Get-Counter -Counter '\Hyper-V Dynamic Memory Balancer(System Balancer)\Available Memory For Balancing' -ComputerName $env:COMPUTERNAME).CounterSamples.CookedValue) / 1024) - 18) / 2))) * 1073741824
+$SDNConfig.NestedVMMemoryinGB = $availablePhysicalMemory
+
 # Set-Credentials
 $localCred = new-object -typename System.Management.Automation.PSCredential `
     -argumentlist "Administrator", (ConvertTo-SecureString $SDNConfig.SDNAdminPassword -AsPlainText -Force)
@@ -3746,14 +3751,14 @@ If ($SDNConfig.ProvisionNC) {
 
     }
 
-    Add-WACtenants @params
+    #   Add-WACtenants @params
 
 
     # Add VMs for NC Admin
 
     $params.domainCred = $NCAdminCred
 
-    Add-WACtenants @params
+    #   Add-WACtenants @params
 
     # Enable Single Sign On
 

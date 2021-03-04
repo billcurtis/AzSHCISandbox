@@ -1,4 +1,4 @@
-# Azure Stack HCI Operators Sandbox (3/4/2021)
+# Azure Stack HCI Operator`s Sandbox (3/4/2021)
 
 
 ![alt text](res/AzSHCISandbox.png "Graphic of a fully deployed Azure Stack HCI Operator's Sandbox")

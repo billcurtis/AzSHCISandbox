@@ -567,12 +567,11 @@ function Add-Files {
         $SDNLABDNS = $SDNConfig.SDNLABDNS    
         $SDNLabRoute = $SDNConfig.SDNLABRoute         
         $ProductKey = $SDNConfig.GUIProductKey
-            
 
         # Only inject product key if host is AzSMGMT
         $azsmgmtProdKey = $null
         if ($AzSHOST.AzSHOST -eq "AzSMGMT") { $azsmgmtProdKey = "<ProductKey>$ProductKey</ProductKey>" }
-                    
+            
  
         $UnattendXML = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -2567,7 +2566,7 @@ CertificateTemplate= WebServer
             # Add Scheduled task to set default browser at login
 
             $stTrigger = New-ScheduledTaskTrigger -AtLogOn
-            $stTrigger.Delay = 'PT2M'
+            $stTrigger.Delay = 'PT1M'
             $stAction = New-ScheduledTaskAction -Execute "C:\ProgramData\chocolatey\bin\SetDefaultBrowser.exe" -Argument 'Chrome'
             $schedTask = Register-ScheduledTask -Action $stAction -Trigger $stTrigger -TaskName SetDefaultBrowser -Force
 
@@ -3117,6 +3116,7 @@ function New-SDNS2DCluster {
             $VerbosePreference = "SilentlyContinue"
 
             Import-Module FailoverClusters 
+            Import-Module Storage
 
             $VerbosePreference = "Continue"
 
@@ -3126,23 +3126,25 @@ function New-SDNS2DCluster {
             # Create Cluster
 
             $VerbosePreference = "SilentlyContinue"
+
             New-Cluster -Name $ClusterName -Node $AzSHOSTs -StaticAddress $ClusterIP `
                 -NoStorage -WarningAction SilentlyContinue | Out-Null
 
+            $VerbosePreference = "Continue"
+
             # Invoke Command to enable S2D on AzStackCluster        
             
-            Enable-ClusterS2D -CacheState Disabled -AutoConfig:0 -SkipEligibilityChecks -Confirm:$false | Out-Null
+            Enable-ClusterS2D -Confirm:$false -Verbose
 
-            $params = @{
+            # Wait for Cluster Performance History Volume to be Created
+            while (!$PerfHistory) {
 
-                StorageSubSystemFriendlyName = "*Clustered*"
-                FriendlyName                 = 'SDN_S2D_Storage'
-                ProvisioningTypeDefault      = 'Fixed'
-                ResiliencySettingNameDefault = 'Simple'
-                WriteCacheSizeDefault        = 0
+                Write-Verbose "Waiting for Cluster Performance History volume to come online."
+                Start-Sleep -Seconds 10            
+                $PerfHistory = Get-ClusterResource | Where-Object { $_.Name -match 'ClusterPerformanceHistory' }
+                if ($PerfHistory) { Write-Verbose "Cluster Perfomance History volume online." }            
+
             }
-
-            New-StoragePool @params -PhysicalDisks (Get-PhysicalDisk | Where-Object { $_.CanPool -eq $true }) | Out-Null
 
             Get-PhysicalDisk | Where-Object { $_.Size -lt 127GB } | Set-PhysicalDisk -MediaType HDD | Out-Null
 
@@ -3150,10 +3152,10 @@ function New-SDNS2DCluster {
             
                 FriendlyName            = "S2D_vDISK1" 
                 FileSystem              = 'CSVFS_ReFS'
-                StoragePoolFriendlyName = 'SDN_S2D_Storage'
+                StoragePoolFriendlyName = 'S2D on AzStackCluster'
                 ResiliencySettingName   = 'Mirror'
                 PhysicalDiskRedundancy  = 1
-                
+                AllocationUnitSize      = 64KB
                 
             }
 
@@ -3165,6 +3167,7 @@ function New-SDNS2DCluster {
             Get-storagesubsystem clus* | set-storagehealthsetting -name “System.Storage.PhysicalDisk.AutoReplace.Enabled” -value “False”
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\spaceport\Parameters -Name HwTimeout -Value 0x00007530
             $VerbosePreference = "Continue"
+           
 
         } | Out-Null
 
@@ -3790,7 +3793,7 @@ $timeSpan = New-TimeSpan -Start $starttime -End $endtime
 
 Write-Verbose "`nSuccessfully deployed the Azure Stack HCI Sandbox"
 
-Write-Host "Deployment time was $($timeSpan.Hours) hours and $($timeSpan.Minutes) minutes." -ForegroundColor Green
+Write-Host "Deployment time was $($timeSpan.Hours) hour and $($timeSpan.Minutes) minutes." -ForegroundColor Green
  
 $ErrorActionPreference = "Continue"
 $VerbosePreference = "SilentlyContinue"

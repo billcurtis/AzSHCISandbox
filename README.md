@@ -15,7 +15,11 @@ Notes for 2023 version:
 
 ## Start learning how to operate Azure Stack HCI without the complicated setup!
 
-Deploy a full Azure Stack HCI environment on either a Server 2019 Hyper-V Host or a Server 2019 Azure VM and start learning how to operate Azure Stack HCI! Did you mess something up?  Just re-deploy! No muss, no fuss!
+Deploy a full Azure Stack HCI environment on either a Server 2022 Hyper-V Host or a Server 2022 Azure VM and start learning how to operate Azure Stack HCI! Did you mess something up?  Just re-deploy! No muss, no fuss!
+
+This version is set for deployment in non-cloud environment.  Microsoft has taken this project and set it to work in the cloud. If you are planning on deploying this sandbox to Azure, it is recommended that you go here:  https://learn.microsoft.com/en-us/azure-stack/hci/guided-quick-deploy-eval?tabs=global-admin 
+
+Want to test the deployment of VMs? PaaS services? Do you need a development environment for Azure Stack HCI without the huge Azure bill?  This is for you.
 
 The Azure Stack HCI Operator's Sandbox is a series of scripts that creates a [HyperConverged](https://docs.microsoft.com/en-us/windows-server/hyperconverged/) environment using four nested Hyper-V Virtual Machines. The purpose of the Azure Stack HCI Operator's Sandbox  is to provide operational training on Microsoft Azure Stack HCI as well as provide a development environment for DevOPs to assist in the creation and
 validation of some Azure Stack HCI features without the time consuming process of setting up physical servers and network routers\switches.
@@ -26,7 +30,8 @@ Also, be aware that Azure Stack HCI Operator's Sandbox  is **NOT** designed to b
 
 ## History
 
-Azure Stack HCI Operator's Sandbox  is based on a *really* fast refactoring of scripts that I wrote for myself to rapidly create online labs for Microsoft Software Defined Networking using SCVMM. The SCVMM scripts have been stripped out and replaced with a stream-lined version that uses Windows Admin Center for the management of Microsoft SDN. As time has progressed, this environment has become invaluable to performing operational evaluations of Windows Admin Center and SDN without the requirement for 
+Azure Stack HCI Operator's Sandbox  is based on a *really* fast refactoring of scripts that I wrote for myself to rapidly create online labs for Microsoft Software Defined Networking using SCVMM. The SCVMM scripts have been stripped out and replaced with a stream-lined version that uses Windows Admin Center for the management of Microsoft SDN. As time has progressed, this environment has become invaluable to performing operational evaluations of Windows Admin Center and SDN without the requirement for hard to
+configure hardware.
 
 ## Scenarios
 
@@ -135,7 +140,7 @@ The following are a list of settings that are configurable and have been fully t
 | azsHCIVHDXPath                         | string | This value controls the location of the Azure Stack HCI OS Image.                                                                                                                                                              | C:\AzHCIVHDs\AzStackHCIPreview1.vhdx |
 | DCName                               | string | Name of the domain controller. Must be limited to 14 characters.                                                                                                                                                | fabrikam.dc                 |
 | GUIProductKey                        | string | Product key for GUI.                                                                                                                                                               |                             |
-| guiVHDXPath                          | string | This value controls the location of the Windows Server 2019 Image VHDX.                                                                                                                                                               | C:\2019 VHDS\2019_GUI.vhdx  |
+| guiVHDXPath                          | string | This value controls the location of the Windows Server 2022 Image VHDX.                                                                                                                                                               | C:\2022 VHDS\2022_GUI.vhdx  |
 | HostVMPath                           | string | This value controls the path where the Nested VMs will be stored on all hosts                                                                                                                                   | V:\VMs                      |
 | InternalSwitch                       | string | Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host. If the internal switch does not exist, it will be created.                               | Fabrikam                    |                                                                                                                                                                      |                             |
 | natDNS                               | string | DNS address for forwarding from Domain Controller. Currently set to Cloudflare's 1.1.1.1 by default.                                                                                                            | 1.1.1.1                     |

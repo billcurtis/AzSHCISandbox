@@ -4,14 +4,13 @@
     
     # Version 1.0.0
 
-    # Multiple Host Setup Parameters
-    MultipleHyperVHosts                  = $false                                # Set to $true if deploying the Nested VM environment across multiple hosts. Set to $false if deploying to a single host. 
-    MultipleHyperVHostNames              = @("2019SDNn1", "2019SDNn2")           # (Deprecated - May work?) Array of all of the hosts which make up the Nested VM environment. Only 2 or 4 hosts supported 
-    MultipleHyperVHostExternalSwitchName = "SDN-Switch"                          # Name of the External Hyper-V VM Switch identical on all hosts.
+    # Software download links
+     admincenterUri = 'https://go.microsoft.com/fwlink/p/?linkid=2194936&clcid=0x409&culture=en-us&country=us'
+
 
     # VHDX Paths 
     guiVHDXPath                          = "C:\AzHCIVHDs\gui.vhdx"               # This value controls the location of the GUI VHDX.              
-    azsHCIVHDXPath                       = "C:\AzHCIVHDs\azshci.vhdx"           # This value controls the location of the Azure Stack HCI VHDX. 
+    azsHCIVHDXPath                       = "C:\AzHCIVHDs\AZHCI-2022.vhdx"              # This value controls the location of the Azure Stack HCI VHDX. 
     
 
     # SDN Lab Admin Password
@@ -19,13 +18,13 @@
 
     # VM Configuration
     HostVMPath                           = "V:\VMs"                              # This value controls the path where the Nested VMs will be stored on all hosts.
-    NestedVMMemoryinGB                   = 30GB                                  # This value controls the amount of RAM for each Nested Hyper-V Host (AzSHOST1-2).
-    AzSMGMTMemoryinGB                    = 16GB                                  # This value controls the amount of RAM for the AzSMGMT Nested VM which contains only the Console, Router, Admincenter, and DC VMs.
+    NestedVMMemoryinGB                   = 128GB                                  # This value controls the amount of RAM for each Nested Hyper-V Host (AzSHOST1-2).
+    AzSMGMTMemoryinGB                    = 24GB                                  # This value controls the amount of RAM for the AzSMGMT Nested VM which contains only the Console, Router, Admincenter, and DC VMs.
     InternalSwitch                       = "InternalSwitch"                      # Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host.
 
 
     # ProductKeys
-    GUIProductKey                        = "WMDGN-G9PQG-XVVXX-R3X43-63DFG"        # Product key for Windows Server 2019 (Desktop Experience) Datacenter Installation
+    GUIProductKey                        = "WX4NM-KYWYW-QJJR4-XV3QB-6VM33"        # Product key for Windows Server 2022 (Desktop Experience) Datacenter Installation
 
     # SDN Lab Domain
     SDNDomainFQDN                        = "contoso.com"                          # Limit name (not the .com) to 14 characters as the name will be used as the NetBIOS name. 
@@ -44,8 +43,8 @@
 
 
     #SDN Provisioning
-    ProvisionNC                          = $true                                  # Provisions Network Controller Automatically.
-    ConfigureBGPpeering                  = $true                                  # Peers the GW and MUX VMs with the BGP-ToR-Router automatically if ProvisionNC = $true
+    ProvisionNC                          = $true                                 # Provisions Network Controller Automatically.
+    ConfigureBGPpeering                  = $true                                 # Peers the GW and MUX VMs with the BGP-ToR-Router automatically if ProvisionNC = $true
 
 
     ################################################################################################################
@@ -53,15 +52,15 @@
     ################################################################################################################
 
     # AzSMGMT Management VM's Memory Settings
-    MEM_DC                               = 2GB                                     # Memory provided for the Domain Controller VM
-    MEM_BGP                              = 2GB                                     # Memory provided for the BGP-ToR-Router
-    MEM_Console                          = 3GB                                     # Memory provided for the Windows 10 Console VM
-    MEM_WAC                              = 4GB                                     # Memory provided for the Windows Admin Center VM
-    MEM_GRE                              = 2GB                                     # Memory provided for the gre-target VM
-    MEM_IPSEC                            = 2GB                                     # Memory provided for the ipsec-target VM
+    MEM_DC                               = 8GB                                     # Memory provided for the Domain Controller VM
+    MEM_BGP                              = 4GB                                     # Memory provided for the BGP-ToR-Router
+    MEM_Console                          = 4GB                                     # Memory provided for the Windows 10 Console VM
+    MEM_WAC                              = 8GB                                     # Memory provided for the Windows Admin Center VM
+    MEM_GRE                              = 4GB                                     # Memory provided for the gre-target VM
+    MEM_IPSEC                            = 4GB                                     # Memory provided for the ipsec-target VM
 
     #Cluster S2D Storage Disk Size (per disk)
-    S2D_Disk_Size                        = 100GB                                    # Disk size for each of the 4 dynamic VHD disks attached to the 3 AzSHOST VMs that will be used to create the SDNCLUSTER
+    S2D_Disk_Size                        = 200GB                                    # Disk size for each of the 4 dynamic VHD disks attached to the 3 AzSHOST VMs that will be used to create the SDNCLUSTER
 
 
     # SDN Host IPs
@@ -128,6 +127,6 @@
     WACport                              = 443
 
     # SDDCInstall
-    SDDCInstall                          = $true 
+    SDDCInstall                          = $true
 
 }

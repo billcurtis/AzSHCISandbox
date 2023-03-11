@@ -2,7 +2,7 @@
 .SYNOPSIS 
     Deploys and configures a minimal Microsoft SDN infrastructure in a Hyper-V
     Nested Environment for training purposes. This deployment method is not
-    supported for Production purposes.
+    supported for production purposes.
 
 .EXAMPLE
     .\New-AzSHCISandbox.ps1
@@ -24,16 +24,11 @@
     * 250gb minimum of hard drive space if a single host installation. 150GB 
       minimum of drive space per Hyper-V host if using multiple hosts.
 
-    * 64gb of memory if single host. 32GB of memory per host if using 2 hosts,
-      and 16gb of memory if using 4 hosts.
+    * 256gb RAM - This can be tweaked, but this script was developed on a 256GB system,
 
-    * If using multiple Hyper-V hosts for the lab, then you will need to either
-    use a dumb hub to connect the hosts or a switch with all defined VLANs
-    trunked (12 and 200).
-
-    * If you wish the environment to have internet access, create a VMswitch on
-      the FIRST host that maps to a NIC on a network that has internet access. 
-      The network should use DHCP.
+    * If you wish the environment to have internet access, create a Hyper-V VMswitch on
+       your host that maps to a NIC on a network that has internet access. 
+       The network should use DHCP.
 
     * 2 VHDX (GEN2) files will need to be specified. 
 
@@ -679,7 +674,7 @@ $azsmgmtProdKey
             Copy-Item -Path $azSHCIVHDXPath -Destination ($MountedDrive + ":\VMs\Base\AzSHCI.vhdx") -Force
             Copy-Item -Path .\Applications\SCRIPTS -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force
             Copy-Item -Path .\Applications\SDNEXAMPLES -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force
-            Copy-Item -Path '.\Applications\Windows Admin Center' -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force  
+            #Copy-Item -Path '.\Applications\Windows Admin Center' -Destination ($MountedDrive + ":\VmConfigs") -Recurse -Force  
 
         }       
     
@@ -862,11 +857,7 @@ function Resolve-Applications {
     $coreResult = $SDNConfig.COREProductKey -match '^([A-Z0-9]{5}-){4}[A-Z0-9]{5}$'
     
     if (!$guiResult) { Write-Error "Cannot validate or find the product key for the Windows Server Datacenter Desktop Experience." }
-    
 
-    # Verify Windows Admin Center
-    $isWAC = Get-ChildItem -Path '.\Applications\Windows Admin Center' -Filter *.MSI
-    if (!$isWAC) { Write-Error "Please check and ensure that you have correctly copied the Admin Center install file to \Applications\RSAT." }
 
     # Are we on Server Core?
     $regKey = "hklm:/software/microsoft/windows nt/currentversion"
@@ -1253,6 +1244,8 @@ function Set-AzSMGMT {
             Write-Verbose "Joining host $AzSHOSTName ($ip) to domain"
 
             Try {
+                 
+                $ErrorActionPreference = "Silently Continue"
 
                 $AzSHOSTTest = Test-Connection $IP -Quiet
 
@@ -1265,6 +1258,8 @@ function Set-AzSMGMT {
 
                 While ($DomainJoined -ne $SDNConfig.SDNDomainFQDN) {
 
+                $ErrorActionPreference = "SilentlyContinue"
+
                     $params = @{
 
                         ComputerName = $IP
@@ -1273,19 +1268,37 @@ function Set-AzSMGMT {
                     }
 
 
-                    $job = Invoke-Command @params -ScriptBlock { add-computer -DomainName $args[1] -Credential $args[0] } -AsJob 
+                    $job = Invoke-Command @params -ScriptBlock { 
+                    
+                    Write-Host "Joining Domain"
+                    $ErrorActionPreference = "SilentlyContinue"
+                    add-computer -DomainName $args[1] -Credential $args[0] -ErrorAction SilentlyContinue
+                    Restart-Computer -Force -Confirm:$false 
+                    
+                    } -AsJob -ErrorAction SilentlyContinue
 
                     While ($Job.JobStateInfo.State -ne "Completed") { Start-Sleep -Seconds 10 }
                     $DomainJoined = (Get-WmiObject -ComputerName $ip -Class win32_computersystem).domain
                 }
-
-                Restart-Computer -ComputerName $IP -Credential $localCred -Force
+                
+                
+                Get-VM $AzSHOSTName | Restart-Vm -Force -Wait -Verbose
+                Write-Verbose "Sleeping 60 Seconds to let VM Reboot."
+                Start-Sleep -Seconds 60
 
             }
 
             Catch { 
 
-                throw $_
+                Write-Host "Exception was expected, but we should be ok."
+                Get-VM $AzSHOSTName | Restart-Vm -Force -Wait
+                Write-Verbose "Sleeping 60 Seconds to let VM Reboot."
+                Start-Sleep -Seconds 60
+
+            }
+            Finally {
+
+            $ErrorActionPreference = "Stop"
 
             }
 
@@ -1517,13 +1530,16 @@ function New-DCVM {
 
         Write-Verbose "Configuring Domain Controller VM and Installing Active Directory."
 
+        $ErrorActionPreference = "SilentlyContinue"
+
+        try {
         Invoke-Command -VMName $VMName -Credential $localCred -ArgumentList $SDNConfig -ScriptBlock {
 
             $SDNConfig = $args[0]
 
             $VerbosePreference = "Continue"
             $WarningPreference = "SilentlyContinue"
-            $ErrorActionPreference = "Stop"
+            $ErrorActionPreference = "SilentlyContinue"
             $DCName = $SDNConfig.DCName
             $IP = $SDNConfig.SDNLABDNS
             $PrefixLength = ($SDNConfig.AzSMGMTIP.split("/"))[1]
@@ -1544,6 +1560,8 @@ function New-DCVM {
             Set-Item WSMan:\localhost\Client\TrustedHosts * -Confirm:$false -Force
 
             Write-Verbose "Installing Active Directory Forest. This will take some time..."
+
+
         
             $SecureString = ConvertTo-SecureString $SDNConfig.SDNAdminPassword -AsPlainText -Force
             Write-Verbose "Installing Active Directory..." 
@@ -1563,8 +1581,15 @@ function New-DCVM {
 
             
             $VerbosePreference = "SilentlyContinue"
+            Install-ADDSForest  @params -InstallDns -Confirm -Force -NoRebootOnCompletion  | Out-Null
 
-            Install-ADDSForest  @params -InstallDns -Confirm -Force -NoRebootOnCompletion | Out-Null
+        }
+        }
+        catch {
+
+        Write-Verbose -Message "Exception caught! (Must be on Server 2022!)"
+        Write-Verbose -Message "Sleeping for two minutes to give time for Active Directory to install."
+        Start-Sleep -Seconds 120
 
         }
 
@@ -2069,7 +2094,7 @@ function New-AdminCenterVM {
         # Copy Source Files
 
         Write-Verbose "Copying Application and Script Source Files to $VMName"
-        Copy-Item 'C:\VMConfigs\Windows Admin Center' -Destination C:\TempWACMount\ -Recurse -Force
+        # Copy-Item 'C:\VMConfigs\Windows Admin Center' -Destination C:\TempWACMount\ -Recurse -Force
         Copy-Item C:\VMConfigs\SCRIPTS -Destination C:\TempWACMount -Recurse -Force
         Copy-Item C:\VMConfigs\SDNEXAMPLES -Destination C:\TempWACMount -Recurse -Force
         New-Item -Path C:\TempWACMount\VHDs -ItemType Directory -Force | Out-Null
@@ -2450,8 +2475,13 @@ CertificateTemplate= WebServer
             $SDNConfig = Import-PowerShellDataFile -Path C:\SCRIPTS\AzSHCISandbox-Config.psd1
 
 
-            # Install Windows Admin Center
 
+            # Install Windows Admin Center
+            Write-Verbose "Creating Admin Center folder"
+            New-Item -ItemType Directory -Path 'C:\Windows Admin Center' | Out-Null
+            Write-Verbose "Downloading Windows Admin Center"
+            $admincenterUri = $SDNConfig.admincenterUri
+            Invoke-RestMethod -Method Get -Uri $admincenterUri -OutFile 'C:\Windows Admin Center\admincenter.msi' 
             $pfxThumbPrint = (Get-ChildItem -Path Cert:\LocalMachine\my | Where-Object { $_.FriendlyName -match "Nested SDN Windows Admin Cert" }).Thumbprint
             Write-Verbose "Thumbprint: $pfxThumbPrint"
             Write-Verbose "WACPort: $WACPort"
@@ -2535,40 +2565,16 @@ CertificateTemplate= WebServer
             $WUKey = "HKLM:\software\Policies\Microsoft\Windows\WindowsUpdate"
             New-Item -Path $WUKey -Force | Out-Null
             New-ItemProperty -Path $WUKey -Name AUOptions -PropertyType Dword -Value 2 `
-                -Force | Out-Null  
+                -Force | Out-Null             
+
             
-            # Install Chocolatey
-            $ErrorActionPreference = "Continue"
-            Write-Verbose "Installing Chocolatey"
-            Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-            Start-Sleep -Seconds 10
+              # Install AzureCli
 
-            # Install Chromium
+            Write-Verbose 'Installing Azure CLI'
+            Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi
+            Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'
+            Remove-Item .\AzureCLI.msi -Force
 
-            Write-Verbose 'Installing Chromium browser in admincenter vm'
-            $expression = "choco install googlechrome -y"
-            Invoke-Expression $expression
-            $ErrorActionPreference = "Stop" 
-            
-            # Install Set Default Browser
-            Write-Verbose 'Installing setdefaultbrowser in admincenter vm'
-            $expression = "choco install setdefaultbrowser -y"
-            Invoke-Expression $expression
-            $ErrorActionPreference = "Stop" 
-                          
-       
-            # Add Chromium to list of browsers
-            Write-Verbose 'Setting Default Broswer on admincenter vm'
-            $expression = "SetDefaultBrowser.exe Chrome"
-            Invoke-Expression $expression
-
-
-            # Add Scheduled task to set default browser at login
-
-            $stTrigger = New-ScheduledTaskTrigger -AtLogOn
-            $stTrigger.Delay = 'PT1M'
-            $stAction = New-ScheduledTaskAction -Execute "C:\ProgramData\chocolatey\bin\SetDefaultBrowser.exe" -Argument 'Chrome'
-            $schedTask = Register-ScheduledTask -Action $stAction -Trigger $stTrigger -TaskName SetDefaultBrowser -Force
 
         } 
 
@@ -2714,9 +2720,22 @@ function New-HyperConvergedEnvironment {
                 
             } 
 
+            try {
+            $ErrorActionPreference = "SilentlyContinue"
             Write-Verbose "Rebooting SDN Host $AzSHOST"
-            Restart-Computer $AzSHOST -Force -Confirm:$false -Credential $using:domainCred
+            #Restart-Computer $AzSHOST -Force -Confirm:$false -Credential $using:domainCred
+            Get-VM $AzSHOST | Restart-Vm -Force -Wait -ErrorAction SilentlyContinue
+            Write-Verbose "Sleeping 60 Seconds to let VM Reboot."
+            Start-Sleep -Seconds 60
+            }
+            catch {
 
+            Write-Host "Handling the Exception"
+            Get-VM $AzSHOST | Restart-Vm -Force -Wait
+            Write-Verbose "Sleeping 60 Seconds to let VM Reboot."
+            Start-Sleep -Seconds 60
+
+            }
         }
 
         # Wait until all the AzSHOSTs have been restarted
@@ -3288,7 +3307,7 @@ Copy-Item $ConfigurationDataFile -Destination .\Applications\SCRIPTS -Force
 
 # Set VM Host Memory
 $totalPhysicalMemory = (Get-CimInstance -ClassName 'Cim_PhysicalMemory' | Measure-Object -Property Capacity -Sum).Sum / 1GB
-$availablePhysicalMemory = (([math]::Round(((((Get-Counter -Counter '\Hyper-V Dynamic Memory Balancer(System Balancer)\Available Memory For Balancing' -ComputerName $env:COMPUTERNAME).CounterSamples.CookedValue) / 1024) - 18) / 2))) * 1073741824
+$availablePhysicalMemory = (([math]::Round(((((Get-Counter -Counter '\Hyper-V Dynamic Memory Balancer(System Balancer)\Available Memory For Balancing' -ComputerName $env:COMPUTERNAME).CounterSamples.CookedValue) / 1024) - 36) / 2))) * 1073741824
 $SDNConfig.NestedVMMemoryinGB = $availablePhysicalMemory
 
 # Set-Credentials

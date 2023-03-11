@@ -1,4 +1,14 @@
-# Azure Stack HCI Operator`s Sandbox (3/4/2021)
+# Azure Stack HCI Operator`s Sandbox (3/11/2023)
+
+Notes for 2023 version:
+
+1. Standardized on Server 2022.
+2. Windows Admin Center is now downloaded automatically, so you'll always have the latest version!
+3. Google Chrome is no longer installed as Edge is now in Server 2022.
+4. Azure CLI is installed during the installation in the AdminCenter virtual machine
+5. Static RAM assigments are now made instead of dynamic. **Highly** recommend using a system with 128GB of RAM and 3 TB of storage.
+
+
 
 
 ![alt text](res/AzSHCISandbox.png "Graphic of a fully deployed Azure Stack HCI Operator's Sandbox")
@@ -26,19 +36,19 @@ The ``SCRIPTS\Scenarios`` folder in this solution will be updated quite frequent
 
 You probably are not going to read the requirements listed below, so here are the steps to get SDN Sandbox up and running on a **single host** :
 
-1. Download and unzip this solution to a drive on a Intel based System with at least 64gb of RAM, 2016 (or higher) Hyper-V Installed, and , optionally, a External Switch attached to a network that can route to the Internet and provides DHCP (Getting Proxy to work is on my list).
+1. Download and unzip this solution to a drive on a Intel based System with at least 128gb of RAM, 2022 (or higher) Hyper-V Installed, and a Hyper-V External Switch attached to a network that can route to the Internet and provides DHCP. Proxies are not supported.
 
 > **Note** - It is best to use Windows Server **Desktop Experience** on a single machine as it is easier to RDP into the **Console** VM.
 
-2. Create VHDX files for the 2019 Datacenter GUI and for Azure Stack HCI. Using Convert-WindowsImage to create images from the ISO is recommended:
+2. Create VHDX files for the **2022 Datacenter Desktop Experience** and for Azure Stack HCI. Using **Convert-WindowsImage** to create images from the ISO is recommended.
 
 
 ```
 Install-PackageProvider -Name Nuget
 Install-Module -Name Convert-WindowsImage  
 
-Convert-WindowsImage -SourcePath 'M:\temp\New-SDNVHDXFile\17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso'  `
- -Edition "Windows Server 2019 Datacenter Evaluation (Desktop Experience)" `
+Convert-WindowsImage -SourcePath 'M:\temp\New-SDNVHDXFile\en-us_windows_server_2022_updated_oct_2022_x64_dvd_c5b651c9.iso'  `
+ -Edition "Windows Server 2022 Datacenter Evaluation (Desktop Experience)" `
  -VHDFormat VHDX `
  -DiskLayout UEFI  `
  -VHDPath 'M:\temp\New-SDNVHDXFile\GUI.VHDX'
@@ -50,24 +60,22 @@ Convert-WindowsImage -SourcePath 'M:\temp\New-SDNVHDXFile\17763.737.190906-2324.
     
     * The Password needs to be the same as the local administrator password on your physical Hyper-V Host
 
-    * Product Key for Server 2019 
+    * Product Key for Server 2022
       
-    >**Warning!** The Configuration file will be copied to the console drive during install. **The 2019 product key will be in plain text and not deleted or hidden!**     
+    >**Warning!** The Configuration file will be copied to the console drive during install. **The 2022 product key will be in plain text and not deleted or hidden!**     
     
     * The paths to the VHDX files that you just created.
     * Set ``HostVMPath`` where your VHDX files will reside. (*Ensure that there is at least 250gb of free space!*)
    
-4. Download the [**Windows Admin Center**](https://docs.microsoft.com/en-us/windows-server/manage/windows-admin-center/understand/windows-admin-center) install file and place it in the `.\Windows Admin Center` folder.
+4. On the Hyper-V Host, open up a PowerShell console (with admin rights) and navigate to the ``AzSHCISandbox` folder and run ``.\New-AzSHCISandbox``.
 
-6. On the Hyper-V Host, open up a PowerShell console (with admin rights) and navigate to the ``AzSHCISandbox` folder and run ``.\New-AzSHCISandbox``.
+5. It should take a little over an hour to deploy (if using SSD drives).
 
-7. It should take a little over an hour to deploy (if using SSD drives).
+6. Using RDP, log into the 'Admincenter' virtual machine with your creds: User: Contoso\Administrator Password: Password01
 
-8. Using RDP, log into the 'Admincenter' virtual machine with your creds: User: Contoso\Administrator Password: Password01
+7. Launch the link to Windows Admin Center
 
-9. Launch the link to Windows Admin Center
-
-10. Add the Hyper-Converged Cluster *AzStackCluster* to *Windows Admin Center* with *Network Controller*: [https://nc01.contosoc.com](https://nc01.contosoc.com) and you're off and ready to go!
+8. Add the Hyper-Converged Cluster *AzStackCluster* to *Windows Admin Center*  and you're off and ready to go!
 
 ![alt text](res/AddHCCluster.png "Add Hyper-Converged Cluster Connection")
 
@@ -93,12 +101,11 @@ The AzSHCISandbox can only run on a single host.
 
 |  Number of Hyper-V Hosts | Memory per Host   | HD Available Free Space   | Processor   |  Hyper-V Switch Type |
 |---|---|---|---|---|
-| 1  | 64gb | 250gb SSD\NVME   | Intel - 4 core Hyper-V Capable with SLAT   | Installed Automatically by Script  |
-
+| 1  | 128gb | 250gb SSD\NVME   | Intel\AMD - 4 core Hyper-V   | External Hyper-V VMSwitch **with** Internet Access |
 
 Please note the following regarding the hardware setup requirements:
 
-* Windows Server 2019 (Standard or Datacenter) or higher Hyper-V **MUST** already have been installed along with the RSAT-Hyper-V tools.
+* Windows Server 2022 (Standard or Datacenter) or higher Hyper-V **MUST** already have been installed along with the RSAT-Hyper-V tools.
 
 * It is recommended that you disable all disconnected network adapters or network adapters that will not be used.
 
@@ -108,15 +115,11 @@ Please note the following regarding the hardware setup requirements:
 
 ### Required VHDX files:
 
- **GUI.vhdx** - Sysprepped **Desktop Experience** version of Windows Server 2019 **Datacenter**. Only Windows Server 2019 Datacenter is supported.       
+ **GUI.vhdx** - Sysprepped **Desktop Experience** version of Windows Server 2022 **Datacenter**. Only Windows Server 2022 Datacenter is supported.       
   
 **AzSHCI.vhdx** - Same requirements.
 
->**Note:** A Product Key WILL be required to be entered into the Configuration File for Windows Server 2019 Datacenter. If you are using VL media, use the [KMS Client Keys](https://docs.microsoft.com/en-us/windows-server/get-started/kmsclientkeys) keys for the version of Windows you are installing.
-
-## Required Software
-
-[**Windows Admin Center**](https://docs.microsoft.com/en-us/windows-server/manage/windows-admin-center/understand/windows-admin-center) - The latest version of Windows Admin Center's MSI installer file should be at the root of the *Windows Admin Center* folder under *.\Applications*
+>**Note:** A Product Key WILL be required to be entered into the Configuration File for Windows Server 2022 Datacenter. If you are using VL media, use the [KMS Client Keys](https://docs.microsoft.com/en-us/windows-server/get-started/kmsclientkeys) keys for the version of Windows you are installing.
 
 
 ## Configuration File (AzSHCISandbox-Config) Reference
@@ -134,11 +137,7 @@ The following are a list of settings that are configurable and have been fully t
 | GUIProductKey                        | string | Product key for GUI.                                                                                                                                                               |                             |
 | guiVHDXPath                          | string | This value controls the location of the Windows Server 2019 Image VHDX.                                                                                                                                                               | C:\2019 VHDS\2019_GUI.vhdx  |
 | HostVMPath                           | string | This value controls the path where the Nested VMs will be stored on all hosts                                                                                                                                   | V:\VMs                      |
-| InternalSwitch                       | string | Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host. If the internal switch does not exist, it will be created.                               | Fabrikam                    |
-| MultipleHyperVHostExternalSwitchName (deprecated)| string | Name of the External Hyper-V VM Switch identical on all hosts making Multiple Hyper-V Hosts                                                                                                                     | "MyExternalSwitch"          |
-| MultipleHyperVHostNames   (deprecated)           | array  | Array of all of the hosts which make up the Nested VM environment. Only 2 or 4 hosts supported                                                                                                                  | @("XEON8","XEON9")          |
-| MultipleHyperVHosts   (deprecated)               | bool   | Set to $true if deploying the Nested VM environment across multiple hosts. Set to $false if deploying to a single host.                                                                                         |                             |
-| natConfigure (deprecated)                         | bool   | Specifies whether or not to configure NAT                                                                                                                                                                       |                             |
+| InternalSwitch                       | string | Name of internal switch that the SDN Lab VMs will use in Single Host mode. This only applies when using a single host. If the internal switch does not exist, it will be created.                               | Fabrikam                    |                                                                                                                                                                      |                             |
 | natDNS                               | string | DNS address for forwarding from Domain Controller. Currently set to Cloudflare's 1.1.1.1 by default.                                                                                                            | 1.1.1.1                     |
 | natExternalVMSwitchName              | string | Name of external virtual switch on the physical host that has access to the Internet.                                                                                                                           | Internet                    |
 | natSubnet                            | string | This value is the subnet is the NAT router will use to route to  SDNMGMT to access the Internet. It can be any /24 subnet and is only used for routing. Keep the default unless it overlaps with a real subnet. | 192.168.46.0/24             |
